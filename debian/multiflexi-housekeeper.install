@@ -5,3 +5,4 @@ src/MultiFlexi/Duty/*.php	usr/lib/multiflexi-housekeeper/MultiFlexi/Duty
 src/*.php		usr/lib/multiflexi-housekeeper
 debian/autoload.php	usr/lib/multiflexi-housekeeper
 eu.multiflexi.multiflexi_housekeeper.metainfo.xml	usr/share/metainfo/
+eu.multiflexi.multiflexi_housekeeper.svg	usr/share/icons/hicolor/scalable/apps/
