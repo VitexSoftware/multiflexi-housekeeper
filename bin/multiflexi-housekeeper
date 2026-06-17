@@ -1,0 +1,13 @@
+#!/bin/sh
+# MultiFlexi HouseKeeper launcher
+# Translates --dry-run / -n flags to env var before exec'ing PHP.
+
+export MULTIFLEXI_HOUSEKEEPER_DRY_RUN=false
+
+for arg in "$@"; do
+    if [ "$arg" = "--dry-run" ] || [ "$arg" = "-n" ]; then
+        export MULTIFLEXI_HOUSEKEEPER_DRY_RUN=true
+    fi
+done
+
+exec php -q -f /usr/lib/multiflexi-housekeeper/housekeeper.php -- "$@"

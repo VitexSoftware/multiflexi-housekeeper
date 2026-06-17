@@ -1,0 +1,49 @@
+Source: multiflexi-housekeeper
+Section: admin
+Priority: optional
+Maintainer: Vítězslav Dvořák <info@vitexsoftware.cz>
+Build-Depends:
+ debhelper-compat (= 13),
+ jq,
+ moreutils
+Standards-Version: 4.7.0
+Homepage: https://multiflexi.eu
+Rules-Requires-Root: no
+Vcs-Git: https://github.com/VitexSoftware/multiflexi-housekeeper.git
+Vcs-Browser: https://github.com/VitexSoftware/multiflexi-housekeeper
+
+Package: multiflexi-housekeeper
+Architecture: all
+Multi-Arch: foreign
+Depends:
+ ${misc:Depends},
+ multiflexi-sqlite (>= 2.4.1) | multiflexi-mysql (>= 2.4.1) | multiflexi-pgsql (>= 2.4.1),
+ php-vitexsoftware-multiflexi-core
+Suggests:
+ multiflexi-web,
+ multiflexi-cli
+Description: Periodic maintenance daemon for MultiFlexi
+ MultiFlexi HouseKeeper performs housekeeping duties to keep the
+ MultiFlexi platform running flawlessly. It runs on an hourly systemd
+ timer and executes the following duties in order:
+ .
+  * Stale task finalization — marks expired open/running tasks as missed
+    or failed so the obligation metric stays accurate
+  * Orphaned job cleanup — removes jobs with broken company/runtemplate
+    references and ghost queue entries
+  * Schedule integrity — resets stale next_schedule values so the
+    scheduler daemon re-picks stuck runtemplates
+  * Data retention cleanup — enforces GDPR retention policies, hard- or
+    soft-deleting expired rows from job, log, user_sessions, and other
+    tables (uses RetentionService when multiflexi-web is installed)
+  * Disk temp file cleanup — removes orphaned result files left behind
+    after artifact storage
+  * Log pruning — keeps the log table below a configurable row count
+  * RunTemplate counter recalculation — corrects drifted success/failure
+    job counters after retention deletions
+  * Credential health check — calls checkAvailability() on credentials
+    assigned to active runtemplates; reports Misconfigured credentials
+    before they block a job at runtime
+ .
+ Runs as a systemd timer (hourly) or as a long-running daemon when
+ MULTIFLEXI_DAEMONIZE=true. Supports a --dry-run mode for safe previews.

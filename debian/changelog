@@ -1,0 +1,10 @@
+multiflexi-housekeeper (1.0.0) UNRELEASED; urgency=low
+
+  * Initial release — 8 housekeeping duties:
+    StaleTaskFinalization, OrphanedJobCleanup, ScheduleIntegrity,
+    DataRetentionCleanup, DiskTempFileCleanup, LogPruning,
+    RuntemplateCounterRecalc, CredentialHealthCheck.
+  * Runs as systemd timer (hourly, Persistent=true) or long-running daemon.
+  * Supports --dry-run mode and MULTIFLEXI_HOUSEKEEPER_SKIP_DUTIES.
+
+ -- Vítězslav Dvořák <info@vitexsoftware.cz>  Tue, 17 Jun 2026 12:00:00 +0200

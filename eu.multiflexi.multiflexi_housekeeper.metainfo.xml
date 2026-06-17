@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="console-application">
+  <id>eu.multiflexi.multiflexi_housekeeper</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>multiflexi-housekeeper</name>
+  <summary>Periodic maintenance daemon for MultiFlexi</summary>
+  <description>
+    <p>
+      MultiFlexi HouseKeeper performs housekeeping duties to keep the MultiFlexi
+      platform running flawlessly. It runs hourly via a systemd timer and handles
+      stale task finalization, orphaned job cleanup, schedule integrity repair,
+      GDPR data retention, disk temp file cleanup, log pruning, RunTemplate counter
+      recalculation, and credential health checking.
+    </p>
+  </description>
+  <categories>
+    <category>System</category>
+    <category>ConsoleOnly</category>
+  </categories>
+  <url type="homepage">https://multiflexi.eu</url>
+  <url type="bugtracker">https://github.com/VitexSoftware/multiflexi-housekeeper/issues</url>
+  <developer id="eu.vitexsoftware">
+    <name>Vitex Software</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+</component>

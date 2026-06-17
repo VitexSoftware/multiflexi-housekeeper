@@ -1,0 +1,37 @@
+multiflexi-housekeeper for Debian
+===================================
+
+PHP Autoloader
+--------------
+
+This package installs classes under /usr/lib/multiflexi-housekeeper/MultiFlexi/
+with a local autoload.php that also loads the MultiFlexi core autoloader from
+/usr/share/php/MultiFlexi/autoload.php.
+
+Systemd Timer
+-------------
+
+The package installs and enables multiflexi-housekeeper.timer (hourly) and
+multiflexi-housekeeper.service (Type=oneshot). The timer starts automatically
+on installation. To check when the next run is scheduled:
+
+  systemctl list-timers multiflexi-housekeeper
+
+To trigger an immediate run:
+
+  systemctl start multiflexi-housekeeper.service
+
+To preview what would be done without making changes:
+
+  sudo -u multiflexi multiflexi-housekeeper --dry-run
+
+Daemon Mode
+-----------
+
+For continuous (loop) operation instead of timer-driven runs, set
+
+  MULTIFLEXI_DAEMONIZE=true
+
+in /etc/multiflexi/multiflexi.env and use the service unit directly.
+
+ -- Vítězslav Dvořák <info@vitexsoftware.cz>  Tue, 17 Jun 2026 12:00:00 +0200

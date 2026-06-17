@@ -1,0 +1,239 @@
+.TH MULTIFLEXI\-HOUSEKEEPER 8 "June 2026" "multiflexi-housekeeper 1.0.0" "MultiFlexi"
+.SH NAME
+multiflexi\-housekeeper \- periodic maintenance for the MultiFlexi platform
+.SH SYNOPSIS
+.B multiflexi\-housekeeper
+.RB [ \-\-dry\-run | \-n ]
+.SH DESCRIPTION
+.B multiflexi\-housekeeper
+performs a set of housekeeping duties to keep the MultiFlexi ecosystem
+running flawlessly. It is normally invoked once per hour by the
+.B multiflexi\-housekeeper.timer
+systemd timer unit, but can also be run on demand or as a long-running
+daemon (see
+.BR DAEMON ).
+.PP
+The following duties are executed in order:
+.TP
+.B 1. StaleTaskFinalization
+Marks
+.I open
+or
+.I running
+Tasks whose scheduling window has already expired. Tasks with zero
+attempts become
+.IR missed ;
+tasks with at least one attempt become
+.IR failed .
+Provides a safety net when the scheduler daemon is down.
+.TP
+.B 2. OrphanedJobCleanup
+Calls
+.B Scheduler::cleanupOrphanedJobs()
+and
+.B purgeBrokenQueueRecords()
+to remove jobs with missing company or runtemplate references and broken
+schedule queue entries. Also removes ghost jobs (unstarted, no queue
+entry) older than
+.BR MULTIFLEXI_HOUSEKEEPER_STALE_JOB_AGE .
+.TP
+.B 3. ScheduleIntegrity
+Calls
+.B Scheduler::initializeScheduling()
+and resets stale
+.I next_schedule
+timestamps on RunTemplates that have no corresponding pending job, so
+the scheduler daemon re-picks them up on its next tick.
+.TP
+.B 4. DataRetentionCleanup
+Enforces GDPR data retention policies. Delegates to
+.I MultiFlexi\eDataRetention\eRetentionService
+when
+.B multiflexi\-web
+is installed; otherwise uses a built-in pass that reads the
+.I data_retention_policies
+table and applies
+.I hard_delete
+or
+.I soft_delete
+to expired rows.
+.TP
+.B 5. DiskTempFileCleanup
+Removes orphaned temporary result files from the MultiFlexi temp
+directory that are older than
+.B MULTIFLEXI_HOUSEKEEPER_TMP_AGE_HOURS
+hours and not referenced by any currently-running job.
+.TP
+.B 6. LogPruning
+Deletes the oldest rows from the
+.I log
+table, keeping at most
+.B MULTIFLEXI_HOUSEKEEPER_LOG_KEEP
+records. Runs after all other duties so their log messages survive.
+.TP
+.B 7. RuntemplateCounterRecalc
+Recalculates
+.I successfull_jobs_count
+and
+.I failed_jobs_count
+on all RunTemplates from the surviving job records. Corrects drift
+caused by data retention deletions.
+.TP
+.B 8. CredentialHealthCheck
+Calls
+.B checkAvailability()
+on the prototype of each credential assigned to an active RunTemplate.
+Credentials returning
+.I Misconfigured
+are logged as warnings so operators can act before a job is blocked at
+runtime.
+.SH OPTIONS
+.TP
+.BR \-\-dry\-run , \ \-n
+Simulate all duties without making any database writes or filesystem
+changes. Logs show what
+.I would
+be affected. Translates to
+.B MULTIFLEXI_HOUSEKEEPER_DRY_RUN=true
+internally.
+.SH ENVIRONMENT
+Configuration is read from
+.I /etc/multiflexi/multiflexi.env
+(or a
+.I .env
+file one level above the script).
+.TP
+.B DB_CONNECTION
+Database driver:
+.BR mysql ", " pgsql ", " sqlite " (default: mysql)"
+.TP
+.B DB_HOST
+Database host (default:
+.BR localhost )
+.TP
+.B DB_PORT
+Database port
+.TP
+.B DB_DATABASE
+Database name
+.TP
+.B DB_USERNAME
+Database user
+.TP
+.B DB_PASSWORD
+Database password
+.TP
+.B APP_DEBUG
+Set to
+.B true
+to enable verbose console logging.
+.TP
+.B MULTIFLEXI_DAEMONIZE
+Set to
+.B true
+to run in daemon mode (loop). Default:
+.B false
+(run once and exit, driven by the systemd timer).
+.TP
+.B MULTIFLEXI_HOUSEKEEPER_DRY_RUN
+Set to
+.B true
+to simulate all duties without making changes. Default:
+.BR false .
+.TP
+.B MULTIFLEXI_HOUSEKEEPER_CYCLE_PAUSE
+Seconds to sleep between cycles in daemon mode. Default:
+.BR 3600 .
+.TP
+.B MULTIFLEXI_HOUSEKEEPER_LOG_KEEP
+Maximum number of rows to keep in the
+.I log
+table. Default:
+.BR 100000 .
+.TP
+.B MULTIFLEXI_HOUSEKEEPER_TMP_AGE_HOURS
+Minimum age in hours before orphaned temp files are deleted. Default:
+.BR 24 .
+.TP
+.B MULTIFLEXI_HOUSEKEEPER_STALE_JOB_AGE
+Minutes after which an unstarted, unscheduled job is considered orphaned.
+Default:
+.BR 60 .
+.TP
+.B MULTIFLEXI_HOUSEKEEPER_SKIP_DUTIES
+Comma-separated list of duty class names to skip (short name without
+namespace), e.g.\&
+.IR "CredentialHealthCheck,LogPruning" .
+.TP
+.B MULTIFLEXI_HOUSEKEEPER_CREDENTIAL_CHECK
+Set to
+.B false
+to disable the CredentialHealthCheck duty entirely. Default:
+.BR true .
+.TP
+.B ZABBIX_SERVER
+.TQ
+.B ZABBIX_HOST
+Enable Zabbix logging (same as other MultiFlexi daemons).
+.SH DAEMON
+To run as a continuous daemon rather than via the systemd timer:
+.PP
+.RS
+.nf
+MULTIFLEXI_DAEMONIZE=true multiflexi-housekeeper
+.fi
+.RE
+.PP
+Or enable daemon mode in
+.I /etc/multiflexi/multiflexi.env
+and use the service unit:
+.PP
+.RS
+.nf
+systemctl start multiflexi-housekeeper.service
+.fi
+.RE
+.SH TIMER
+The recommended deployment is via the systemd timer, which fires hourly
+with up to 5 minutes of random jitter and catches up missed runs on boot
+.RB ( Persistent=true ):
+.PP
+.RS
+.nf
+systemctl enable multiflexi-housekeeper.timer
+systemctl start  multiflexi-housekeeper.timer
+systemctl list-timers multiflexi-housekeeper
+.fi
+.RE
+.PP
+Run ad-hoc without waiting for the timer:
+.PP
+.RS
+.nf
+systemctl start multiflexi-housekeeper.service
+.fi
+.RE
+.SH EXIT STATUS
+.TP
+.B 0
+All duties completed (individual errors are logged but do not change the
+exit code).
+.TP
+.B 1
+Another instance is already running, or the database is unavailable
+after retries.
+.SH FILES
+.TP
+.I /etc/multiflexi/multiflexi.env
+Runtime environment configuration.
+.TP
+.I /usr/lib/multiflexi-housekeeper/housekeeper.php
+Main PHP entry point.
+.TP
+.I /tmp/multiflexi-housekeeper.pid
+PID lock file preventing concurrent runs.
+.SH SEE ALSO
+.BR multiflexi-scheduler (8),
+.BR multiflexi-executor (8)
+.SH AUTHOR
+Vítězslav Dvořák <info@vitexsoftware.cz>

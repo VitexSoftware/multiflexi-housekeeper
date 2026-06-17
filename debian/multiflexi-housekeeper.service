@@ -1,0 +1,16 @@
+[Unit]
+Description=MultiFlexi HouseKeeper - periodic maintenance
+After=network.target
+
+[Service]
+Type=oneshot
+User=multiflexi
+Group=multiflexi
+EnvironmentFile=/etc/multiflexi/multiflexi.env
+ExecStart=/usr/bin/php /usr/lib/multiflexi-housekeeper/housekeeper.php
+TimeoutStartSec=600
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

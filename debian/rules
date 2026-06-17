@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+PKG_VERSION := $(shell dpkg-parsechangelog -S Version | sed 's/~.*//')
+PKG_SOURCE  := $(shell jq -r '.name' composer.json)
+
+%:
+	dh $@
+
+override_dh_install:
+	mkdir -p debian/tmp/
+	jq '.version = "'`dpkg-parsechangelog | sed -n 's/^Version: //p'| sed 's/~.*//'`'"' composer.json |sponge debian/tmp/composer.json
+	dh_install
+	sed -i "s|'unknown'|'$(PKG_SOURCE)'|" debian/multiflexi-housekeeper/usr/lib/multiflexi-housekeeper/autoload.php
+	sed -i "s|'0.0.0'|'$(PKG_VERSION)'|"  debian/multiflexi-housekeeper/usr/lib/multiflexi-housekeeper/autoload.php
+	sed -i -e 's/.\.\/vendor/\/usr\/lib\/multiflexi-housekeeper/g' debian/multiflexi-housekeeper*/usr/lib/multiflexi-housekeeper/*.php
+	sed -i -e 's/\.\.\/\.env/\/etc\/multiflexi\/multiflexi\.env/g' debian/multiflexi-housekeeper*/usr/lib/multiflexi-housekeeper/*.php

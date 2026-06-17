@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+  configure|trigger)
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload || true
+        systemctl enable multiflexi-housekeeper.timer || true
+        systemctl start  multiflexi-housekeeper.timer || true
+    fi
+
+    if [ "$2" = "restart-multiflexi" ]; then
+        systemctl try-restart multiflexi-housekeeper.service || true
+    fi
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

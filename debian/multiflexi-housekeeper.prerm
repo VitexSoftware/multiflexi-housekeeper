@@ -1,0 +1,41 @@
+#!/bin/sh
+set -e
+
+PKG="${DPKG_MAINTSCRIPT_PACKAGE:-multiflexi-housekeeper}"
+BASE_DIR="/usr/lib/multiflexi-housekeeper"
+
+case "$1" in
+    remove|upgrade|deconfigure)
+        # Stop the timer before removal
+        if [ -d /run/systemd/system ]; then
+            systemctl stop multiflexi-housekeeper.timer || true
+            systemctl disable multiflexi-housekeeper.timer || true
+        fi
+
+        # Clean non-packaged files so dpkg can remove the directory without warnings.
+        if [ -d "$BASE_DIR" ]; then
+            PKG_FILES="$(dpkg -L "$PKG" 2>/dev/null || true)"
+            find "$BASE_DIR" -mindepth 1 -print | while IFS= read -r path; do
+                if echo "$PKG_FILES" | grep -Fxq "$path"; then
+                    : # owned by package, keep
+                else
+                    rm -rf "$path" || true
+                fi
+            done
+            find "$BASE_DIR" -type d -empty -delete || true
+        fi
+        ;;
+
+    purge)
+        if [ -d "$BASE_DIR" ]; then
+            rm -rf "$BASE_DIR" || true
+        fi
+        ;;
+
+    *)
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
